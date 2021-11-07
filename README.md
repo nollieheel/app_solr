@@ -1,4 +1,3 @@
 # app_solr
 
-TODO: Enter the cookbook description here.
-
+A cookbook that install Solr with basic settings.

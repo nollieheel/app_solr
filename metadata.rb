@@ -1,19 +1,11 @@
-name 'app_solr'
-maintainer 'Earth U'
+name             'app_solr'
+maintainer       'Earth U'
 maintainer_email 'iskitingbords@gmail.com'
-license 'Apache-2.0'
-description 'Installs/Configures app_solr'
-version '0.1.0'
+license          'Apache-2.0'
+description      'Installs/Configures app_solr'
+issues_url       'https://github.com/nollieheel/app_solr/issues'
+source_url       'https://github.com/nollieheel/app_solr'
+version          '0.1.0'
+
 chef_version '>= 16.0'
-
-# The `issues_url` points to the location where issues for this cookbook are
-# tracked.  A `View Issues` link will be displayed on this cookbook's page when
-# uploaded to a Supermarket.
-#
-# issues_url 'https://github.com/<insert_org_here>/app_solr/issues'
-
-# The `source_url` points to the development repository for this cookbook.  A
-# `View Source` link will be displayed on this cookbook's page when uploaded to
-# a Supermarket.
-#
-# source_url 'https://github.com/<insert_org_here>/app_solr'
+supports     'ubuntu', '20.04'
