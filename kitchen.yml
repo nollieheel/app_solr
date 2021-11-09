@@ -19,8 +19,8 @@ suites:
     verifier:
       inspec_tests:
         - test/integration/default
-#  - name: test
-#    named_run_list: test
-#    verifier:
-#      inspec_tests:
-#        - test/integration/test
+  - name: test
+    named_run_list: test
+    verifier:
+      inspec_tests:
+        - test/integration/test
