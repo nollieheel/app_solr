@@ -24,6 +24,9 @@ unified_mode true
 # Installation of standalone Solr 7.7.x as per this guide:
 # https://solr.apache.org/guide/7_7/taking-solr-to-production.html
 
+# Installation of standalone Solr 6.6.x as per this guide:
+# https://solr.apache.org/guide/6_6/installing-solr.html
+
 property :version, String,
          description: 'Solr version to install (from the 7.x family)',
          name_property: true
@@ -94,6 +97,22 @@ property :other_props, Hash,
          default: {}
 
 action_class do
+  def major_version
+    new_resource.version.split('.')[0]
+  end
+
+  def prop_apt_packages
+    if property_is_set?(:apt_packages)
+      new_resource.apt_packages
+    else
+      if major_version == '6'
+        %w(openjdk-8-jdk-headless openjdk-8-jre-headless)
+      else
+        %w(openjdk-11-jdk-headless openjdk-11-jre-headless)
+      end
+    end
+  end
+
   def source_url
     format(new_resource.source_uri, new_resource.version, new_resource.version)
   end
@@ -149,7 +168,9 @@ action :install do
   execute 'DEBIAN_FRONTEND=noninteractive apt-get '\
           '-y -o Dpkg::Options::="--force-confnew" dist-upgrade'
 
-  package new_resource.apt_packages
+  prop_apt_packages.each do |p|
+    package p
+  end
 
   remote_file "#{tmp}/#{tarball_name}" do
     source source_url

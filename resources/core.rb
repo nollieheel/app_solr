@@ -65,7 +65,7 @@ property :schema_source, String,
 
 property :schema_cookbook, String,
          description: 'Cookbook of cookbook_file for custom schema.xml',
-         default: ''
+         default: cb
 
 action_class do
   def solr_bin
@@ -78,10 +78,6 @@ action_class do
 
   def core_conf_dir
     "#{core_dir}/conf"
-  end
-
-  def managed_schema?
-    new_resource.schema_source == '' || new_resource.schema_cookbook == ''
   end
 end
 
@@ -109,5 +105,10 @@ action :create do
     group    new_resource.solr_user
     mode     '0660'
     only_if  { new_resource.use_custom_schema }
+  end
+
+  service 'solr' do
+    action  :restart
+    only_if { new_resource.use_custom_solrconfig || new_resource.use_custom_schema }
   end
 end

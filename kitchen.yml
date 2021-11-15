@@ -24,3 +24,7 @@ suites:
     verifier:
       inspec_tests:
         - test/integration/test
+    attributes:
+      test:
+        version: '7.7.3'
+        #version: '6.6.6'
