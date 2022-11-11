@@ -16,5 +16,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-default['test']['version']   = '7.7.3'
+default['test']['version'] = '7.7.3'
+
+# Please modify for staging monolith environments
+default['test']['set_ulimits']   = true
+default['test']['solr_host']     = '0.0.0.0'
+default['test']['solr_java_mem'] = '-Xms1536m -Xmx1536m'
+
 default['test']['core_name'] = 'core1'
+default['test']['core_src']  = {
+  '7.7.3' => {
+    solrconfig: 'solrconfig_7.7.3.xml',
+    schema: 'schema_7.7.3.xml',
+  },
+  '6.6.6' => {
+    solrconfig: 'solrconfig_6.6.6.xml',
+    schema: 'schema_6.6.6.xml',
+  },
+  '5.5.5' => {
+    solrconfig: 'solrconfig_5.5.5.xml',
+    schema: 'schema_5.5.5.xml',
+  },
+}

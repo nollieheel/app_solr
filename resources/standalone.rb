@@ -2,7 +2,7 @@
 # Cookbook:: app_solr
 # Resource:: standalone
 #
-# Copyright:: 2021, Earth U
+# Copyright:: 2022, Earth U
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,44 +17,44 @@
 # limitations under the License.
 
 require 'pathname'
-
 cb = 'app_solr'
+
 unified_mode true
 
 # Installation of standalone Solr 7.7.x as per this guide:
 # https://solr.apache.org/guide/7_7/taking-solr-to-production.html
 
 # Installation of standalone Solr 6.6.x as per this guide:
-# https://solr.apache.org/guide/6_6/installing-solr.html
+# https://solr.apache.org/guide/6_6/taking-solr-to-production.html
+
+# Installation of standalone Solr 5.5.x as per this guide:
+# http://archive.apache.org/dist/lucene/solr/ref-guide/apache-solr-ref-guide-5.5.pdf
+
+# Check status of local standalone Solr:
+#   curl http://localhost:8983/solr/admin/info/system?wt=json
 
 property :version, String,
-         description: 'Solr version to install (from the 7.x family)',
+         description: 'Solr version to install. Only supports 5.x, 6.x, 7.x.',
          name_property: true
 
 property :apt_packages, Array,
-         description: 'Apt packages to install',
-         default: %w(
-           openjdk-11-jdk-headless
-           openjdk-11-jre-headless
-         )
-
-property :source_uri, String,
-         description: 'Formatted URL string of the tarball download location. '\
-                      ':version will be interpolated into this string.',
-         default: 'https://archive.apache.org/dist/lucene/solr/%s/solr-%s.tgz'
-
-property :install_script, String,
-         description: 'Solr install script included in the tarball',
-         default: 'bin/install_solr_service.sh'
+         description: 'Apt packages to install (e.g. openjdk packages). '\
+                      'Default: openjdk-11 packages for Solr 7.x and '\
+                      'openjdk-8 packages for Solr 6.x and below.'
 
 property :extract_dir, String,
          description: 'Location to which the tarball will be extracted',
          default: '/opt'
 
 property :solr_user, String,
-         description: 'Name of user that runs Solr. This user is ' \
+         description: 'Name of user that runs Solr. This user is '\
                       'auto-created by the install script',
          default: 'solr'
+
+property :set_ulimits, [true, false],
+         description: 'If true, ulimits for :solr_user will be '\
+                      'maximized to 65535',
+         default: true
 
 property :solr_dir, String,
          description: 'Main directory for Solr',
@@ -97,48 +97,6 @@ property :other_props, Hash,
          default: {}
 
 action_class do
-  def major_version
-    new_resource.version.split('.')[0]
-  end
-
-  def prop_apt_packages
-    if property_is_set?(:apt_packages)
-      new_resource.apt_packages
-    else
-      if major_version == '6'
-        %w(openjdk-8-jdk-headless openjdk-8-jre-headless)
-      else
-        %w(openjdk-11-jdk-headless openjdk-11-jre-headless)
-      end
-    end
-  end
-
-  def source_url
-    format(new_resource.source_uri, new_resource.version, new_resource.version)
-  end
-
-  def tarball_name
-    ::File.basename(source_url)
-  end
-
-  def install_script_path
-    dir1 = ::File.basename(tarball_name, ::File.extname(tarball_name))
-    "#{dir1}/#{new_resource.install_script}"
-  end
-
-  def install_opts
-    opts = "-i #{new_resource.extract_dir} "\
-           "-d #{new_resource.solr_dir} "\
-           "-u #{new_resource.solr_user} "\
-           '-n'
-
-    if new_resource.force_install
-      opts << ' -f'
-    end
-
-    opts
-  end
-
   def form_solr_path(x)
     if x == ''
       new_resource.solr_dir
@@ -146,9 +104,91 @@ action_class do
       Pathname.new(x).absolute? ? x : "#{new_resource.solr_dir}/#{x}"
     end
   end
+end
 
-  def solr_props
-    {
+action :install do
+  tmp = Chef::Config[:file_cache_path]
+
+  # If major version is not here, it's not supported
+  verprops = {
+    '7' => {
+      packages: %w(openjdk-11-jdk-headless openjdk-11-jre-headless),
+      opts:     ' -n',
+      conf_src: 'solr.in.sh_7.7.3.erb',
+      action:   :start,
+    },
+    '6' => {
+      packages: %w(openjdk-8-jdk-headless openjdk-8-jre-headless),
+      opts:     ' -n',
+      conf_src: 'solr.in.sh_6.6.6.erb',
+      action:   :start,
+    },
+    '5' => {
+      packages: %w(openjdk-8-jdk-headless openjdk-8-jre-headless),
+      opts:     '',
+      conf_src: 'solr.in.sh_5.5.5.erb',
+      action:   :restart,
+    },
+  }
+  mv            = new_resource.version.split('.')[0]
+  major_version = verprops[mv]
+
+  apt_update
+  major_version[:packages].each do |p|
+    package p
+  end
+
+  source_url = format(
+                 'https://archive.apache.org/dist/lucene/solr/%s/solr-%s.tgz',
+                 new_resource.version,
+                 new_resource.version
+               )
+  tarball_name   = ::File.basename(source_url)
+  install_script = 'bin/install_solr_service.sh'
+
+  remote_file "#{tmp}/#{tarball_name}" do
+    source source_url
+  end
+
+  tarball_basename = tarball_name.chomp(::File.extname(tarball_name))
+  strip_comp       = install_script.split('/').length
+  execute 'extract_solr_install_script' do
+    cwd     tmp
+    command "tar xzf #{tarball_name} #{tarball_basename}/#{install_script} "\
+            "--strip-components=#{strip_comp}"
+  end
+
+  extracted_script = ::File.basename(install_script)
+  solr_bin         = "#{new_resource.extract_dir}/solr/bin/solr"
+  install_opts     = "-i #{new_resource.extract_dir} "\
+                     "-d #{new_resource.solr_dir} "\
+                     "-u #{new_resource.solr_user}"
+  if new_resource.force_install
+    install_opts << ' -f'
+  end
+  install_opts << major_version[:opts]
+  execute 'install_solr' do
+    cwd     tmp
+    command "bash #{extracted_script} #{tarball_name} #{install_opts}"
+    not_if  { ::File.exist?(solr_bin) && !new_resource.force_install }
+  end
+
+  if new_resource.set_ulimits
+    user_ulimit new_resource.solr_user do
+      filehandle_hard_limit 65535
+      filehandle_soft_limit 65535
+      process_hard_limit    65535
+      process_soft_limit    65535
+    end
+  end
+
+  template '/etc/default/solr.in.sh' do
+    cookbook  cb
+    source    major_version[:conf_src]
+    owner     'root'
+    group     new_resource.solr_user
+    mode      '0640'
+    variables(
       solr_home:     form_solr_path(new_resource.solr_home),
       solr_pid_dir:  form_solr_path(new_resource.solr_pid_dir),
       solr_logs_dir: form_solr_path(new_resource.solr_logs_dir),
@@ -156,58 +196,11 @@ action_class do
       solr_host:     new_resource.solr_host,
       solr_port:     new_resource.solr_port,
       solr_java_mem: new_resource.solr_java_mem,
-      other_props:   new_resource.other_props,
-    }
-  end
-end
-
-action :install do
-  tmp = Chef::Config[:file_cache_path]
-
-  apt_update
-  execute 'DEBIAN_FRONTEND=noninteractive apt-get '\
-          '-y -o Dpkg::Options::="--force-confnew" dist-upgrade'
-
-  prop_apt_packages.each do |p|
-    package p
-  end
-
-  remote_file "#{tmp}/#{tarball_name}" do
-    source source_url
-  end
-
-  strip_comp = new_resource.install_script.split('/').length
-  execute 'extract_solr_install_script' do
-    cwd     tmp
-    command "tar xzf #{tarball_name} #{install_script_path} "\
-            "--strip-components=#{strip_comp}"
-  end
-
-  extracted_script = ::File.basename(new_resource.install_script)
-  solr_bin         = "#{new_resource.extract_dir}/solr/bin/solr"
-  execute 'install_solr' do
-    cwd     tmp
-    command "bash #{extracted_script} #{tarball_name} #{install_opts}"
-    not_if  { ::File.exist?(solr_bin) && !new_resource.force_install }
-  end
-
-  user_ulimit new_resource.solr_user do
-    filehandle_hard_limit 65535
-    filehandle_soft_limit 65535
-    process_hard_limit    65535
-    process_soft_limit    65535
-  end
-
-  template '/etc/default/solr.in.sh' do
-    cookbook  cb
-    source    'solr.in.sh_7.7.3.erb'
-    owner     'root'
-    group     new_resource.solr_user
-    mode      '0640'
-    variables solr_props
+      other_props:   new_resource.other_props
+    )
   end
 
   service 'solr' do
-    action :start
+    action major_version[:action]
   end
 end

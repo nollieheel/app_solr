@@ -16,21 +16,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-app_solr_standalone node['test']['version']
+# So Inspec can use node attributes
+ruby_block 'save node attribs' do
+  block do
+    ::File.write("/tmp/kitchen_chef_node.json", node.to_json)
+  end
+end
 
-case node['test']['version']
-when '7.7.3'
-  app_solr_core 'core1' do
-    use_custom_solrconfig true
-    use_custom_schema     true
-  end
-when '6.6.6'
-  app_solr_core 'core1' do
-    use_custom_solrconfig true
-    solrconfig_source     'solrconfig_6.6.6.xml'
-    solrconfig_cookbook   'app_solr'
-    use_custom_schema     true
-    schema_source         'schema_6.6.6.xml'
-    schema_cookbook       'app_solr'
-  end
+app_solr_standalone node['test']['version'] do
+  set_ulimits   node['test']['set_ulimits']
+  solr_host     node['test']['solr_host']
+  solr_java_mem node['test']['solr_java_mem']
+end
+
+app_solr_core node['test']['core_name'] do
+  use_custom_solrconfig true
+  solrconfig_source     node['test']['core_src'][node['test']['version']][:solrconfig]
+  solrconfig_cookbook   'app_solr'
+
+  use_custom_schema true
+  schema_source     node['test']['core_src'][node['test']['version']][:schema]
+  schema_cookbook   'app_solr'
 end
