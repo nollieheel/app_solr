@@ -19,7 +19,7 @@
 # So Inspec can use node attributes
 ruby_block 'save node attribs' do
   block do
-    ::File.write("/tmp/kitchen_chef_node.json", node.to_json)
+    ::File.write('/tmp/kitchen_chef_node.json', node.to_json)
   end
 end
 
@@ -31,10 +31,10 @@ end
 
 app_solr_core node['test']['core_name'] do
   use_custom_solrconfig true
-  solrconfig_source     node['test']['core_src'][node['test']['version']][:solrconfig]
+  solrconfig_source     node['test']['core_src'][node['test']['version']]['solrconfig']
   solrconfig_cookbook   'app_solr'
 
   use_custom_schema true
-  schema_source     node['test']['core_src'][node['test']['version']][:schema]
+  schema_source     node['test']['core_src'][node['test']['version']]['schema']
   schema_cookbook   'app_solr'
 end

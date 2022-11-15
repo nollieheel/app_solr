@@ -5,9 +5,9 @@
 
 # Accessing node attributes
 p    = json('/tmp/kitchen_chef_node.json').params
-vdef = p['default'].has_key?('test') ? p['default']['test'] : {}
-vnor = p['normal'].has_key?('test') ? p['normal']['test'] : {}
-vove = p['override'].has_key?('test') ? p['override']['test'] : {}
+vdef = p['default'].key?('test') ? p['default']['test'] : {}
+vnor = p['normal'].key?('test') ? p['normal']['test'] : {}
+vove = p['override'].key?('test') ? p['override']['test'] : {}
 v    = (vdef.merge(vnor)).merge(vove)
 
 # Tests for resource: app_solr_standalone
