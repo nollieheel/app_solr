@@ -18,15 +18,24 @@ platforms:
   - name: jammy
 
 suites:
-  - name: default
+  - name: v7
     verifier:
       inspec_tests:
         - test/integration/default
     attributes:
       test:
         version: '7.7.3'
-        #version: '6.6.6'
-        #version: '5.5.5'
-        #set_ulimits: false
-        solr_host: '127.0.0.1'
-        solr_java_mem: '-Xms512m -Xmx512m'
+  - name: v6
+    verifier:
+      inspec_tests:
+        - test/integration/default
+    attributes:
+      test:
+        version: '6.6.6'
+  - name: v5
+    verifier:
+      inspec_tests:
+        - test/integration/default
+    attributes:
+      test:
+        version: '5.5.5'

@@ -20,8 +20,8 @@ default['test']['version'] = '7.7.3'
 
 # Please modify for staging monolith environments
 default['test']['set_ulimits']   = true
-default['test']['solr_host']     = '0.0.0.0'
-default['test']['solr_java_mem'] = '-Xms1536m -Xmx1536m'
+default['test']['solr_host']     = '127.0.0.1'
+default['test']['solr_java_mem'] = '-Xms512m -Xmx512m'
 
 default['test']['core_name'] = 'core1'
 default['test']['core_src']  = {
